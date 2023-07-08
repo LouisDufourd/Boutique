@@ -1,0 +1,183 @@
+<head>
+    <link rel="stylesheet" href="/asset/css/bootstrap.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg bg-light navbar-light">
+    <div class="container">
+        <!--Logo Accueil-->
+        <a class="navbar-brand link-dark" href="/">
+            <img src="/asset/img/cart.png" alt="logo" height="40" width="50">
+            <span class="navbar-brand mb-0 h1">Boutique</span>
+        </a>
+
+        <!--Hamburger menu-->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navmenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!--Navbar Menu-->
+        <div class="collapse navbar-collapse" id="navmenu">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link link-secondary" href="/profile">
+                        Profile
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link link-secondary" href="#" data-bs-toggle="modal" data-bs-target="#createShopForm">
+                        Créer une boutique
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link link-secondary" href="/stores">
+                        Mes boutiques
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link link-danger" href="/disconnect">
+                        <div class="text-danger">Déconnexion</div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<br>
+<div class="container">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#member">Membre</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#stock">Stock</a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane container active" id="member">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Nom d'utilisateur</th>
+                        <th scope="col">Rôle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <th scope="row">1</th>
+                    <td>plag</td>
+                    <td>Propriétaire</td>
+                </tr>
+                <tr>
+                    <th scope="row">2</th>
+                    <td>vin</td>
+                    <td>Membre</td>
+                </tr>
+                <tr>
+                    <th scope="row">3</th>
+                    <td>PlagLeFleau</td>
+                    <td>Membre</td>
+                </tr>
+                </tbody>
+            </table>
+            <a class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addUserForm" href="/ajouterUnMembre">Ajouter un membre</a>
+        </div>
+        <div class="tab-pane container fade" id="stock">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Produit</th>
+                    <th scope="col">Quantité</th>
+                    <th scope="col">Prix</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <th scope="row">1</th>
+                    <td>Patate</td>
+                    <td>1000</td>
+                    <td>1€</td>
+                </tr>
+                <tr>
+                    <th scope="row">2</th>
+                    <td>Tomate</td>
+                    <td>1000</td>
+                    <td>1.5€</td>
+                </tr>
+                <tr>
+                    <th scope="row">3</th>
+                    <td>Visière de monstre</td>
+                    <td>1000</td>
+                    <td>0.5€</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addUserForm" tabindex="-1" aria-labelledby="ajouterUnMembre" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createShopLabel">Ajouter un utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <div id="search-autocomplete" class="form-outline">
+                        <label class="form-label" for="username">Nom d'utilisateur</label>
+                        <input type="text" id="username"  class="form-control"/>
+                        <div id="result"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="submit()" class="btn btn-primary">Ajouter un utilisateur</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+    const search_terms = JSON.parse('[{"username":"plag"},{"username":"Jesterio"},{"username":"PlagLeFleau"}]');
+    var input = document.getElementById('username')
+    var res = document.getElementById("result");
+
+    input.addEventListener("input",showResults)
+
+    function autocompleteMatch(input) {
+        let terms = []
+        if (input === '') {
+            return terms;
+        }
+        var reg = new RegExp(input.toLowerCase())
+        search_terms.forEach(e => {
+            if(e.username.toLowerCase().match(reg)) {
+                terms.push(e.username)
+            }
+        })
+        return terms
+    }
+
+    function showResults(val) {
+        res.innerHTML = '';
+        let list = '';
+        let terms = autocompleteMatch(val.target.value);
+        for (i=0; i<terms.length; i++) {
+            list += '<li class="list-group-item" style="cursor: pointer" id="'+i+'" onclick="autoComplete(this)">' + terms[i] + '</li>';
+        }
+        res.innerHTML = '<ul class="list-group">' + list + '</ul>';
+    }
+
+    function autoComplete(e) {
+        input.value = e.innerHTML
+    }
+
+    function submit() {
+        document.location.href = "/ajouterUnMembre?url=" + document.location.pathname + "&username=" + input.value
+    }
+</script>
+<script src="/asset/js/bootstrap.min.js"></script>
+</body>
