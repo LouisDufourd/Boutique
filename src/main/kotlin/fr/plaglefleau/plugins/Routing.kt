@@ -584,8 +584,9 @@ fun Application.configureRouting() {
                         }
                     }
                     put("updateInventory") {
-                            val receive = call.receive<InventoryReceive>()
-                            gestion.updateInventory(receive.inventory, receive.username)
+                        val receive = call.receive<InventoryReceive>()
+                        gestion.updateInventory(receive.inventory, receive.username)
+                        call.respond(HttpStatusCode.OK, "Good")
                     }
                 }
                 route("store/") {

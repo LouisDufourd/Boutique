@@ -13,7 +13,7 @@ fun main() {
     embeddedServer(Netty, port = 80, host = "0.0.0.0", module = Application::module)
         .start(wait = false)
 
-    val thread = Thread() {
+    val thread = Thread {
         while (true) {
             val gestion = Gestion()
             for (store in gestion.getStores()) {
