@@ -404,14 +404,16 @@ fun Application.configureRouting() {
                             call.respond(
                                 HttpStatusCode.NoContent,
                                 ClientRegisterResponse(
-                                    "The username or password is invalid"
+                                    "The username or password is invalid",
+                                    false
                                 )
                             )
                         } else {
                             if (!verifyEmailAddress(registerReceive.email)) {
                                 call.respond(
                                     ClientRegisterResponse(
-                                        "The email is incorrect"
+                                        "The email is incorrect",
+                                        false
                                     )
                                 )
                             } else {
@@ -419,7 +421,8 @@ fun Application.configureRouting() {
                                     call.respond(
                                         HttpStatusCode.LengthRequired,
                                         ClientRegisterResponse(
-                                            "The username need 4 character minimum and the password need 8 character minimum"
+                                            "The username need 4 character minimum and the password need 8 character minimum",
+                                            false
                                         )
                                     )
                                 } else {
@@ -432,7 +435,8 @@ fun Application.configureRouting() {
                                             call.respond(
                                                 HttpStatusCode.OK,
                                                 ClientRegisterResponse(
-                                                    "User has been created"
+                                                    "User has been created",
+                                                    true
                                                 )
                                             )
                                         }
@@ -441,7 +445,8 @@ fun Application.configureRouting() {
                                             call.respond(
                                                 HttpStatusCode.OK,
                                                 ClientRegisterResponse(
-                                                    "The username is already in use"
+                                                    "The username is already in use",
+                                                    false
                                                 )
                                             )
                                         }
