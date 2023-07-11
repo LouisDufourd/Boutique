@@ -46,7 +46,5 @@ dependencies {
     implementation("com.sun.mail:android-mail:1.6.0")
     implementation("com.sun.mail:android-activation:1.6.0")
 
-    implementation("org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT") //spigot
-
     implementation("mysql:mysql-connector-java:8.0.32") //mysql connector
 }

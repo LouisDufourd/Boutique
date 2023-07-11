@@ -6,8 +6,12 @@ import fr.plaglefleau.models.api.boutique.receive.BoutiquePayReceive
 import fr.plaglefleau.models.api.boutique.response.BoutiquePayResponse
 import fr.plaglefleau.models.api.client.receive.*
 import fr.plaglefleau.models.api.client.response.*
+import fr.plaglefleau.models.database.Inventory
 import fr.plaglefleau.models.database.Utilisateur
 import fr.plaglefleau.models.freemarker.*
+import fr.plaglefleau.models.minecraft.Enchantment
+import fr.plaglefleau.models.minecraft.Item
+import fr.plaglefleau.models.minecraft.Material
 import fr.plaglefleau.models.session.UserSession
 import io.ktor.http.*
 import io.ktor.server.routing.*
@@ -379,21 +383,23 @@ fun Application.configureRouting() {
                         }
                     }
                     get("inventory/{username}") {
-                        TODO("Not Implemented Yet")
-                        val slots = ArrayList<Int>()
-                        for (i in 0..26) {
-                            slots.add(i)
+                        val username = call.parameters["username"].toString()
+                        val inventory: Inventory? = gestion.getInventory(username)
+                        if(inventory == null) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            call.respond(HttpStatusCode.OK, inventory)
                         }
-                        val inv = "rO0ABXcEAAAAKXNyABpvcmcuYnVra2l0LnV0aWwuaW8uV3JhcHBlcvJQR+zxEm8FAgABTAADbWFwdAAPTGphdmEvdXRpbC9NYXA7eHBzcgA1Y29tLmdvb2dsZS5jb21tb24uY29sbGVjdC5JbW11dGFibGVNYXAkU2VyaWFsaXplZEZvcm0AAAAAAAAAAAIAAlsABGtleXN0ABNbTGphdmEvbGFuZy9PYmplY3Q7WwAGdmFsdWVzcQB+AAR4cHVyABNbTGphdmEubGFuZy5PYmplY3Q7kM5YnxBzKWwCAAB4cAAAAAR0AAI9PXQAAXZ0AAR0eXBldAAEbWV0YXVxAH4ABgAAAAR0AB5vcmcuYnVra2l0LmludmVudG9yeS5JdGVtU3RhY2tzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAKGnQAC0NHTV9TSE9UR1VOc3EAfgAAc3EAfgADdXEAfgAGAAAAA3EAfgAIdAAJbWV0YS10eXBldAAIaW50ZXJuYWx1cQB+AAYAAAADdAAISXRlbU1ldGF0AApVTlNQRUNJRklDdAC0SDRzSUFBQUFBQUFBQUgzTVFRcURNQlNFNGJGQnNIRlI4RGpTamRnYmVBQ1JHQkxSK0VyeWluZnlsUHB3NDZyYkdiNWZBd3JQSmdScTZiY3lnRUloYjJtaGlQZG4xeWdiNXNINFlGZE9HbmxuNkdzTFBLWVJMK05DblR4RjdwT3NtYml6a1drb0h0dzlBd2hsTXZORks2R2JuWnhuTy9aSmpyOGFPQUMvdVJWOXFBQUFBQT09c3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+AAlxAH4ACnEAfgALdXEAfgAGAAAABHEAfgANc3EAfgAOAAAKGnQACkNHTV9QSVNUT0xzcQB+AABzcQB+AAN1cQB+AAYAAAADcQB+AAhxAH4AFXEAfgAWdXEAfgAGAAAAA3EAfgAYcQB+ABl0AJRINHNJQUFBQUFBQUFBRTNNUVE1QU1CQkc0WjlHUW0yY1IyeWF1b0VEaUZTRHhIUkV4NldjVXJ1emZjbjdOS0RRR0NLMi9BUUIwQ2xVbGsrK01ZeXZSbXRFRnJlVER4STFxc254NVd1VXg0ck9iZFNUWDQrSDVwaHprY2VFRkJwS2x1M3ZKQmNmTFZSakxHc0FBQUE9c3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+AAlxAH4ACnQABmFtb3VudHVxAH4ABgAAAARxAH4ADXNxAH4ADgAAChp0AAlDR01fU0hFTExzcQB+AA4AAABAc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+AAlxAH4ACnEAfgApdXEAfgAGAAAABHEAfgANc3EAfgAOAAAKGnEAfgAscQB+AC1zcQB+AABzcQB+AAN1cQB+AAYAAAAEcQB+AAhxAH4ACXEAfgAKcQB+ACl1cQB+AAYAAAAEcQB+AA1zcQB+AA4AAAoadAAQQ0dNX0JBU0lDX0JVTExFVHEAfgAtc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+AAlxAH4ACnEAfgApdXEAfgAGAAAABHEAfgANc3EAfgAOAAAKGnEAfgA4c3EAfgAOAAAAEHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHNxAH4AAHNxAH4AA3VxAH4ABgAAAARxAH4ACHEAfgAJcQB+AApxAH4AC3VxAH4ABgAAAARxAH4ADXNxAH4ADgAAChp0AA1MRUFUSEVSX0JPT1RTc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+ABV0AAtVbmJyZWFrYWJsZXQABWNvbG9ydXEAfgAGAAAABHEAfgAYdAANTEVBVEhFUl9BUk1PUnNyABFqYXZhLmxhbmcuQm9vbGVhbs0gcoDVnPruAgABWgAFdmFsdWV4cAFzcQB+AABzcQB+AAN1cQB+AAYAAAAEcQB+AAh0AANSRUR0AARCTFVFdAAFR1JFRU51cQB+AAYAAAAEdAAFQ29sb3JzcQB+AA4AAAAAc3EAfgAOAAAA/3EAfgBWc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+AAlxAH4ACnEAfgALdXEAfgAGAAAABHEAfgANc3EAfgAOAAAKGnQAEExFQVRIRVJfTEVHR0lOR1NzcQB+AABzcQB+AAN1cQB+AAYAAAAEcQB+AAhxAH4AFXEAfgBIcQB+AEl1cQB+AAYAAAAEcQB+ABhxAH4AS3EAfgBNc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+AFFxAH4AUnEAfgBTdXEAfgAGAAAABHEAfgBVcQB+AFZzcQB+AA4AAAD/cQB+AFZzcQB+AABzcQB+AAN1cQB+AAYAAAAEcQB+AAhxAH4ACXEAfgAKcQB+AAt1cQB+AAYAAAAEcQB+AA1zcQB+AA4AAAoadAASTEVBVEhFUl9DSEVTVFBMQVRFc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+ABVxAH4ASHEAfgBJdXEAfgAGAAAABHEAfgAYcQB+AEtxAH4ATXNxAH4AAHNxAH4AA3VxAH4ABgAAAARxAH4ACHEAfgBRcQB+AFJxAH4AU3VxAH4ABgAAAARxAH4AVXEAfgBWc3EAfgAOAAAA/3EAfgBWc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+AAlxAH4ACnEAfgALdXEAfgAGAAAABHEAfgANc3EAfgAOAAAKGnQADkxFQVRIRVJfSEVMTUVUc3EAfgAAc3EAfgADdXEAfgAGAAAABHEAfgAIcQB+ABVxAH4ASHEAfgBJdXEAfgAGAAAABHEAfgAYcQB+AEtxAH4ATXNxAH4AAHNxAH4AA3VxAH4ABgAAAARxAH4ACHEAfgBRcQB+AFJxAH4AU3VxAH4ABgAAAARxAH4AVXEAfgBWc3EAfgAOAAAA/3EAfgBWcA=="
-                        /*call.respond(
-                            InventoryReceive(
-                                Inventory(
-                                    inv,
-                                    slots
-                                ),
-                                "plag"
-                            )
-                        )*/
+                    }
+                    get("balance/{username}") {
+                        val username = call.parameters["username"].toString()
+                        val solde = gestion.getSolde(username)
+                        if(solde < 0) {
+                            call.respond(HttpStatusCode.NotFound)
+                        } else {
+                            println(solde)
+                            call.respond(HttpStatusCode.OK, ClientBalanceResponse(solde))
+                        }
                     }
 
                     post("register") {
@@ -529,12 +535,10 @@ fun Application.configureRouting() {
                                     )
                                 )
                             } else {
-                                if (gestion.connexion(
-                                        clientPayReceive.username,
-                                        clientPayReceive.password
-                                    ).id != clientPayReceive.fromUser
-                                ) {
+                                val connect = gestion.connexion(clientPayReceive.username, clientPayReceive.password)
+                                if (!connect.isGoodLogin || gestion.getUtilisateur(connect.id)!!.username != clientPayReceive.fromUser) {
                                     call.respond(
+                                        HttpStatusCode.Unauthorized,
                                         ClientPayResponse(
                                             "You don't have the right to do that"
                                         )
@@ -556,6 +560,7 @@ fun Application.configureRouting() {
 
                                         2 -> {
                                             call.respond(
+                                                HttpStatusCode.NotFound,
                                                 ClientPayResponse(
                                                     "The user ${clientPayReceive.fromUser} don't exist"
                                                 )
@@ -564,6 +569,7 @@ fun Application.configureRouting() {
 
                                         3 -> {
                                             call.respond(
+                                                HttpStatusCode.PaymentRequired,
                                                 ClientPayResponse(
                                                     "The user ${clientPayReceive.fromUser} don't have enough money"
                                                 )
@@ -572,6 +578,7 @@ fun Application.configureRouting() {
 
                                         4 -> {
                                             call.respond(
+                                                HttpStatusCode.NotFound,
                                                 ClientPayResponse(
                                                     "The user ${clientPayReceive.toUser} don't exist"
                                                 )
@@ -582,6 +589,7 @@ fun Application.configureRouting() {
                             }
                         } catch (e: Exception) {
                             call.respond(
+                                HttpStatusCode.InternalServerError,
                                 ClientPayResponse(
                                     e.message!!
                                 )
@@ -677,6 +685,7 @@ suspend fun handleStockRequest(call: ApplicationCall) {
     val url = call.parameters["url"].toString()
     val articleID = call.parameters["articleID"]?.toIntOrNull()
     val boutiqueID = call.parameters["boutiqueID"]?.toIntOrNull()
+    val itemName = call.parameters["itemName"]?.toString()
 
     if (url == "null" || articleID == null || boutiqueID == null) {
         call.respondRedirect("/")
@@ -705,8 +714,8 @@ suspend fun handleStockRequest(call: ApplicationCall) {
         }
         "/bailoutStock" -> {
             val quantity = call.parameters["quantity"]?.toIntOrNull()
-            if (quantity != null && quantity >= 0) {
-                if (gestion.removeItemFromInventory(userSession.userID, articleID, quantity) &&
+            if (quantity != null && itemName != "null" && quantity >= 0) {
+                if (gestion.removeItemFromInventory(userSession.userID, Item(Material(itemName!!),"",0,0,ArrayList()), quantity) &&
                     gestion.isTheUserHaveTheRights(userSession.userID, boutiqueID, 3)
                 ) {
                     gestion.bailoutStock(articleID, boutiqueID, quantity)

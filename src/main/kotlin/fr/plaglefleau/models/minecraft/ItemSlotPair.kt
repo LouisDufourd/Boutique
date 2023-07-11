@@ -1,3 +1,3 @@
 package fr.plaglefleau.models.minecraft
 
-data class ItemSlotPair(val item: String, val slot: Int)
+data class ItemSlotPair(var item: Item, val slot: Int)

@@ -1,14 +1,14 @@
 package fr.plaglefleau.bdd_MySql
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import fr.plaglefleau.models.database.*
+import fr.plaglefleau.models.minecraft.Item
 import fr.plaglefleau.models.minecraft.ItemSlotPair
 import fr.plaglefleau.models.session.UserConnect
-import fr.plaglefleau.serialization.JsonItemStack
-import org.bukkit.inventory.ItemStack
 import java.sql.ResultSet
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import kotlin.collections.ArrayList
 
 
 class Gestion {
@@ -116,14 +116,12 @@ class Gestion {
         if(userID == null) {
             return 2
         }
-        for (i in 0..40) {
-            preparedStatement = laConnexion.getConnexion().prepareStatement(
-                "INSERT INTO inventaire (article_id, user_id, quantité, slot_number) VALUES (NULL,?,0,?)"
-            )
-            preparedStatement.setInt(1,userID)
-            preparedStatement.setInt(2,i)
-            preparedStatement.executeUpdate()
-        }
+        preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "INSERT INTO inventaire (user_id,inventory) VALUES (?,?)"
+        )
+        preparedStatement.setInt(1,userID)
+        preparedStatement.setString(1,Gson().toJson(ArrayList<Any>()))
+        preparedStatement.executeUpdate()
         laConnexion.fermerConnexion()
         return 0
     }
@@ -567,16 +565,19 @@ class Gestion {
         return result
     }
 
-    fun pay(fromUser: Int, toUser: Int, amount: Double): Int {
+    fun pay(fromUser: String, toUser: String, amount: Double): Int {
         val laConnexion = Connexion(url, username, password)
         val solde:Double
+        val fromUserID:Int
+        val toUserID:Int
         var preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT solde FROM user WHERE id = ?"
+            "SELECT solde,id FROM user WHERE username = ?"
         )
-        preparedStatement.setInt(1,fromUser)
+        preparedStatement.setString(1,fromUser)
         var rs = preparedStatement.executeQuery()
         if(rs.next()) {
             solde = rs.getDouble("solde")
+            fromUserID = rs.getInt("id")
         } else {
             laConnexion.fermerConnexion()
             return 2
@@ -586,31 +587,33 @@ class Gestion {
             return 3
         }
         preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT NULL FROM user WHERE id = ?"
+            "SELECT id FROM user WHERE username = ?"
         )
-        preparedStatement.setInt(1,toUser)
+        preparedStatement.setString(1,toUser)
         rs = preparedStatement.executeQuery()
-        if(!rs.next()) {
+        if(rs.next()) {
+            toUserID = rs.getInt("id")
+        } else {
             laConnexion.fermerConnexion()
             return 4
         }
         preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "UPDATE user SET solde = solde - ? WHERE id = ?"
+            "UPDATE user SET solde = solde - ? WHERE username = ?"
         )
         preparedStatement.setDouble(1,amount)
-        preparedStatement.setInt(2,fromUser)
+        preparedStatement.setString(2,fromUser)
         preparedStatement.executeUpdate()
         preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "UPDATE user SET solde = solde + ? WHERE id = ?"
+            "UPDATE user SET solde = solde + ? WHERE username = ?"
         )
         preparedStatement.setDouble(1,amount)
-        preparedStatement.setInt(2,toUser)
+        preparedStatement.setString(2,toUser)
         preparedStatement.executeUpdate()
         preparedStatement = laConnexion.getConnexion().prepareStatement(
             "INSERT INTO user_to_user_historique (from_user_id, to_user_id, amount) VALUES (?,?,?)"
         )
-        preparedStatement.setInt(1,fromUser)
-        preparedStatement.setInt(2,toUser)
+        preparedStatement.setInt(1,fromUserID)
+        preparedStatement.setInt(2,toUserID)
         preparedStatement.setDouble(3,amount)
         val result = preparedStatement.executeUpdate()
         laConnexion.fermerConnexion()
@@ -765,32 +768,51 @@ class Gestion {
         laConnexion.fermerConnexion()
     }
 
-    fun removeItemFromInventory(userID: Int, articleID: Int, amount: Int): Boolean {
+    fun removeItemFromInventory(userID: Int, item: Item, amount: Int): Boolean {
         val laConnexion = Connexion(url, username, password)
         var preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT quantité FROM inventaire WHERE user_id = ? AND article_id = ?"
+            "SELECT inventory FROM inventaire WHERE user_id = ?"
         )
         preparedStatement.setInt(1,userID)
-        preparedStatement.setInt(2,articleID)
         val rs = preparedStatement.executeQuery()
-        val quantity = if(rs.next()) {
-            rs.getInt("quantité")
+        var inventory = if(rs.next()) {
+            rs.getString("inventory")
         } else {
             null
         }
-        if(quantity == null) {
-            return false
-        }
-        if((quantity - amount) < 0) {
+        if(inventory == null) {
             return false
         }
 
+        var itemInInv: Item? = null
+        var pos: Int? = null
+
+        val inv = Gson().fromJson(inventory, Inventory::class.java)
+
+        for (i in 0..inv.items.size) {
+            if(inv.items[i].item.material.name.equals(item.material.name)) {
+                itemInInv = inv.items[i].item
+                pos = i
+            }
+        }
+
+        if(itemInInv == null || pos == null) {
+            return false
+        }
+
+        if((itemInInv.quantity - amount) < 0) {
+            return false
+        }
+        itemInInv.quantity -= amount;
+        inv.items[pos].item = itemInInv
+
+        inventory = Gson().toJson(inv)
+
         preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "UPDATE inventaire SET quantité = quantité - ? WHERE article_id = ? AND user_id = ?"
+            "UPDATE inventaire SET inventory = ? WHERE user_id = ?"
         )
-        preparedStatement.setInt(1,userID)
-        preparedStatement.setInt(2,articleID)
-        preparedStatement.setInt(3,amount)
+        preparedStatement.setString(1,inventory)
+        preparedStatement.setInt(2,userID)
         preparedStatement.executeUpdate()
         laConnexion.fermerConnexion()
         return true
@@ -811,39 +833,92 @@ class Gestion {
         if(userID == null) {
             return
         }
-        for(i in 0..inventory.size) {
-            val item = JsonItemStack.fromJson(inventory[i].item) ?: return
+        for(i in 0..inventory.size-1) {
+            val item = inventory[i].item
             addItemIfNotExist(item)
-            preparedStatement = laConnexion.getConnexion().prepareStatement(
-                "UPDATE inventaire SET article_id = ?, quantité = ? WHERE slot_number = ? AND user_id = ?"
-            )
-            preparedStatement.setInt(1,item.type.id)
-            preparedStatement.setInt(2,item.amount)
-            preparedStatement.setInt(3, inventory[i].slot)
-            preparedStatement.setInt(4,userID)
-            preparedStatement.executeUpdate()
         }
+        preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "UPDATE inventaire SET inventory = ? WHERE user_id = ?"
+        )
+        preparedStatement.setString(1, Gson().toJson(Inventory(inventory)))
+        preparedStatement.setInt(2,userID)
+        preparedStatement.executeUpdate()
         laConnexion.fermerConnexion()
     }
 
-    private fun addItemIfNotExist(item: ItemStack) {
-        val id = item.type.id
+    private fun addItemIfNotExist(item: Item) {
         val laConnexion = Connexion(url, username, password)
         var preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT NULL FROM article WHERE id = ?"
+            "SELECT NULL FROM article WHERE nom = ?"
         )
-        preparedStatement.setInt(1,id)
+        preparedStatement.setString(1,item.material.name)
         val rs = preparedStatement.executeQuery()
         if(rs.next()) {
             return
         }
         preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "INSERT INTO article (id, nom, logo, max_stack_size) VALUES (?, ?, NULL, ?)"
+            "INSERT INTO article (id, nom, logo) VALUES (NULL, ?, NULL)"
         )
-        preparedStatement.setInt(1,id)
-        preparedStatement.setString(2,item.type.name)
-        preparedStatement.setInt(3,item.type.maxStackSize)
+        preparedStatement.setString(1,item.material.name)
         preparedStatement.executeUpdate()
         laConnexion.fermerConnexion()
+    }
+
+    fun getSolde(username: String): Double {
+        var solde: Double
+        val laConnexion = Connexion(url, this.username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT solde FROM user WHERE username = ?"
+        )
+        preparedStatement.setString(1,username)
+        val rs = preparedStatement.executeQuery()
+        if(rs.next()) {
+            solde = rs.getDouble("solde")
+        } else {
+            solde = -1.0
+        }
+        laConnexion.fermerConnexion()
+        return solde
+    }
+
+    fun getInventory(username: String): Inventory? {
+        val id:Int = getUtilisateurID(username)
+        if(id < 0) {
+            return null
+        }
+        val laConnexion = Connexion(url, this.username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT inventory FROM inventaire WHERE user_id = ?"
+        )
+        preparedStatement.setInt(1,id)
+        val rs = preparedStatement.executeQuery()
+        val inventory: Inventory? = if(rs.next()) {
+            Gson().fromJson(rs.getString("inventory"), Inventory::class.java)
+        } else {
+            null
+        }
+        laConnexion.fermerConnexion()
+        return inventory
+    }
+
+    private fun convertJsonToArrayList(json: String?): ArrayList<ItemSlotPair> {
+        val gson = Gson()
+        val type = object : TypeToken<ArrayList<ItemSlotPair>>() {}.type
+        return gson.fromJson(json, type)
+    }
+
+    private fun getUtilisateurID(username: String): Int {
+        val laConnexion = Connexion(url, this.username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT id FROM user WHERE username = ?"
+        )
+        preparedStatement.setString(1,username)
+        val rs = preparedStatement.executeQuery()
+        var id = -1
+        if(rs.next()) {
+            id = rs.getInt("id")
+        }
+        laConnexion.fermerConnexion()
+        return id
     }
 }
