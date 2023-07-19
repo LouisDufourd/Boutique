@@ -13,7 +13,8 @@ fun Application.configureSecurity() {
     install(Sessions) {
         cookie<UserSession>("connect") {
             cookie.path = "/"
-            cookie.maxAgeInSeconds = 900
+            cookie.maxAgeInSeconds = 1800
+
         }
     }
 

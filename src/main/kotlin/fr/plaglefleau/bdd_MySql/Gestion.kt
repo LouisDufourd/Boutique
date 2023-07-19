@@ -824,7 +824,7 @@ class Gestion {
             "SELECT id FROM user WHERE username = ?"
         )
         preparedStatement.setString(1,username)
-        var rs = preparedStatement.executeQuery()
+        val rs = preparedStatement.executeQuery()
         val userID = if(rs.next()) {
             rs.getInt("id")
         } else {
@@ -833,7 +833,7 @@ class Gestion {
         if(userID == null) {
             return
         }
-        for(i in 0..inventory.size-1) {
+        for(i in 0 until inventory.size) {
             val item = inventory[i].item
             addItemIfNotExist(item)
         }
@@ -857,9 +857,10 @@ class Gestion {
             return
         }
         preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "INSERT INTO article (id, nom, logo) VALUES (NULL, ?, NULL)"
+            "INSERT INTO article (id, nom, logo) VALUES (NULL, ?, ?)"
         )
         preparedStatement.setString(1,item.material.name)
+        preparedStatement.setString(2,"/assets/img/item/${item.material.name.toLowerCase()}.png")
         preparedStatement.executeUpdate()
         laConnexion.fermerConnexion()
     }
@@ -901,12 +902,6 @@ class Gestion {
         return inventory
     }
 
-    private fun convertJsonToArrayList(json: String?): ArrayList<ItemSlotPair> {
-        val gson = Gson()
-        val type = object : TypeToken<ArrayList<ItemSlotPair>>() {}.type
-        return gson.fromJson(json, type)
-    }
-
     private fun getUtilisateurID(username: String): Int {
         val laConnexion = Connexion(url, this.username, password)
         val preparedStatement = laConnexion.getConnexion().prepareStatement(
@@ -920,5 +915,21 @@ class Gestion {
         }
         laConnexion.fermerConnexion()
         return id
+    }
+
+    fun getItemImage(item: Item) : String? {
+        val laConnexion = Connexion(url, username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT logo FROM article WHERE nom = ?"
+        )
+        preparedStatement.setString(1,item.material.name)
+        val rs = preparedStatement.executeQuery()
+        var imageSrc = if(rs.next()) {
+            println(rs.getString("logo"))
+            rs.getString("logo")
+        } else {
+            null
+        }
+        return imageSrc
     }
 }

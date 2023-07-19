@@ -9,7 +9,6 @@ import fr.plaglefleau.models.api.client.response.*
 import fr.plaglefleau.models.database.Inventory
 import fr.plaglefleau.models.database.Utilisateur
 import fr.plaglefleau.models.freemarker.*
-import fr.plaglefleau.models.minecraft.Enchantment
 import fr.plaglefleau.models.minecraft.Item
 import fr.plaglefleau.models.minecraft.Material
 import fr.plaglefleau.models.session.UserSession
@@ -98,17 +97,30 @@ fun Application.configureRouting() {
                             createShop = 0
                         }
                         val utilisateur = gestion.getUtilisateur(call.sessions.get<UserSession>()!!.userID)
-                        val profilePage = ProfilePage(ConnectedPage(createShop), utilisateur!!, editError)
-                        if (isFrench(call)) {
-                            call.respond(
-                                HttpStatusCode.OK,
-                                FreeMarkerContent("fr/profile.ftl", mapOf("data" to profilePage))
-                            )
+                        if(utilisateur == null) {
+                            call.respondRedirect("/disconnect")
                         } else {
-                            call.respond(
-                                HttpStatusCode.OK,
-                                FreeMarkerContent("en/profile.ftl", mapOf("data" to profilePage))
-                            )
+                            val inventory = gestion.getInventory(utilisateur.username)
+                            if(inventory != null) {
+                                for (i in 0 until inventory.items.size) {
+                                    inventory.items[i].item.imageSrc = gestion.getItemImage(inventory.items[i].item)
+                                }
+                                val profilePage =
+                                    ProfilePage(ConnectedPage(createShop), utilisateur, editError, inventory)
+                                if (isFrench(call)) {
+                                    call.respond(
+                                        HttpStatusCode.OK,
+                                        FreeMarkerContent("fr/profile.ftl", mapOf("data" to profilePage))
+                                    )
+                                } else {
+                                    call.respond(
+                                        HttpStatusCode.OK,
+                                        FreeMarkerContent("en/profile.ftl", mapOf("data" to profilePage))
+                                    )
+                                }
+                            } else {
+                                call.respondRedirect("/")
+                            }
                         }
                     } catch (e: Exception) {
                         giveErrorPage(call, e)
@@ -386,7 +398,7 @@ fun Application.configureRouting() {
                         val username = call.parameters["username"].toString()
                         val inventory: Inventory? = gestion.getInventory(username)
                         if(inventory == null) {
-                            call.respond(HttpStatusCode.NotFound)
+                            call.respond(HttpStatusCode.NotFound, "no inventory was found")
                         } else {
                             call.respond(HttpStatusCode.OK, inventory)
                         }
@@ -715,7 +727,7 @@ suspend fun handleStockRequest(call: ApplicationCall) {
         "/bailoutStock" -> {
             val quantity = call.parameters["quantity"]?.toIntOrNull()
             if (quantity != null && itemName != "null" && quantity >= 0) {
-                if (gestion.removeItemFromInventory(userSession.userID, Item(Material(itemName!!),"",0,0,ArrayList()), quantity) &&
+                if (gestion.removeItemFromInventory(userSession.userID, Item(Material(itemName!!),"",0,0,ArrayList(), null, null), quantity) &&
                     gestion.isTheUserHaveTheRights(userSession.userID, boutiqueID, 3)
                 ) {
                     gestion.bailoutStock(articleID, boutiqueID, quantity)

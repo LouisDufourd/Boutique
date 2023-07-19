@@ -6,12 +6,64 @@
 <head>
     <@head.header>
     </@head.header>
+    <style>
+        .inventory-container {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-gap: 5px;
+            margin-top: 5px;
+        }
+
+        .item-slot {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            background-color: lightgray;
+            border-radius: 5px;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .item-image {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .item-displayName {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px;
+            font-size: 12px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-quantity {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 3px 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 12px;
+        }
+    </style>
     <title>Profile</title>
 </head>
 <body>
 <@nav.navbar>
 </@nav.navbar>
-<!--Gestion des erreur des formulaires-->
+<!--Gestion des erreurs des formulaires-->
 <#switch data.editerror>
     <#case 1>
         <div class="alert alert-danger" role="alert">
@@ -112,96 +164,49 @@
             <!--Inventaire-->
             <div class="col-md-9">
                 <h1>Inventaire</h1>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-1 card">
-
+                <#assign index = 0>
+                <div class="inventory-container">
+                    <#list 0..40 as slot>
+                        <#assign bool=true>
+                        <#list data.inventory.items as item>
+                            <#if item.slot == slot>
+                                <#assign bool = false>
+                                <div class="item-slot">
+                                    <img class="item-image" src="${item.item.imageSrc}"
+                                         alt="${item.item.material.name}">
+                                    <div class="item-displayName">${item.item.material.name}</div>
+                                    <div class="item-quantity">x${item.item.quantity}</div>
+                                </div>
+                            </#if>
+                        </#list>
+                        <#if bool>
+                            <div class="item-slot">
+                                <#switch index>
+                                    <#case 36>
+                                        <img class="item-image" src="/assets/img/item/empty_armor_slot_boots.png"
+                                             alt="">
+                                        <#break>
+                                    <#case 37>
+                                        <img class="item-image" src="/assets/img/item/empty_armor_slot_leggings.png"
+                                             alt="">
+                                        <#break>
+                                    <#case 38>
+                                        <img class="item-image" src="/assets/img/item/empty_armor_slot_chestplate.png"
+                                             alt="">
+                                        <#break>
+                                    <#case 39>
+                                        <img class="item-image" src="/assets/img/item/empty_armor_slot_helmet.png"
+                                             alt="">
+                                        <#break>
+                                    <#case 40>
+                                        <img class="item-image" src="/assets/img/item/empty_armor_slot_shield.png"
+                                             alt="">
+                                        <#break>
+                                </#switch>
                             </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                            <div class="col-md-1 card">
-
-                            </div>
-                        </div>
-                    </div>
+                        </#if>
+                        <#assign index = index + 1>
+                    </#list>
                 </div>
             </div>
         </div>
@@ -209,6 +214,8 @@
 </div>
 <@form.formulaire>
 </@form.formulaire>
+<br/>
+<br/>
 </body>
 <script src="/assets/js/bootstrap.min.js"></script>
 </html>
