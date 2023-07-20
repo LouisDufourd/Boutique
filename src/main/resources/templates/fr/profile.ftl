@@ -1,4 +1,4 @@
-<#import "navbar.ftl" as nav>
+<#import "connectedNavbar.ftl" as nav>
 <#import "header.ftl" as head>
 <#import "form.ftl" as form>
 <!DOCTYPE html>

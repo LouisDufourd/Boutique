@@ -11,9 +11,9 @@ import java.time.format.DateTimeFormatter
 
 
 class Gestion {
-    val url = "jdbc:mysql://127.0.0.1:3306/boutique"
-    val username = "Plag"
-    val password = "PiWizupAl12u"
+    private val url = "jdbc:mysql://127.0.0.1:3306/boutique"
+    private val username = "Plag"
+    private val password = "PiWizupAl12u"
 
     fun connexion(identifiant: String, password: String): UserConnect {
         val laConnexion = Connexion(url, username, this.password)
@@ -978,7 +978,7 @@ class Gestion {
         return count
     }
 
-    fun getNumberOfMember(storeID: Int): Int{
+    fun getNumberOfMember(storeID: Int): Int {
         val laConnexion = Connexion(url, username, password)
         val preparedStatement = laConnexion.getConnexion().prepareStatement(
             "SELECT COUNT(*) FROM membre_boutique WHERE boutiques_id = ?"
@@ -992,5 +992,96 @@ class Gestion {
         }
         laConnexion.fermerConnexion()
         return count
+    }
+
+    fun getShopOwner(storeID: Int): Utilisateur? {
+        val laConnexion = Connexion(url, username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT id, username, email, password, create_time, nombre_slot, solde " +
+            "FROM membre_boutique " +
+            "INNER JOIN user ON user.id = membre_boutique.user_id " +
+            "WHERE boutiques_id = ? AND role_id = 1"
+        )
+        preparedStatement.setInt(1,storeID)
+        val rs = preparedStatement.executeQuery()
+        val user = if(rs.next()) {
+            Utilisateur(
+                rs.getInt("id"),
+                rs.getString("username"),
+                rs.getString("email"),
+                "",
+                rs.getTimestamp("create_time").toLocalDateTime().format(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")),
+                rs.getInt("nombre_slot"),
+                rs.getDouble("solde")
+            )
+        } else {
+            null
+        }
+        laConnexion.fermerConnexion()
+        return user
+    }
+
+    fun getShopRating(shopID: Int): Double? {
+        val laConnexion = Connexion(url, username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT ((SUM(rating)/(COUNT(rating)*5)) * 5), COUNT(*) FROM rating WHERE boutiques_id = ?"
+        )
+        preparedStatement.setInt(1,shopID)
+        val rs = preparedStatement.executeQuery()
+        val rating = if(rs.next()) {
+            if(rs.getInt(2) > 0) {
+                rs.getDouble(1)
+            } else {
+                null
+            }
+        } else {
+            null
+        }
+        laConnexion.fermerConnexion()
+        return rating
+    }
+
+    fun addReview(shopID: Int, commentary: String, rating: Double, userID: Int): Boolean {
+        val laConnexion = Connexion(url, username, password)
+        var preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT NULL FROM rating WHERE user_id = ? AND boutiques_id = ?"
+        )
+        preparedStatement.setInt(1,userID)
+        preparedStatement.setInt(2,shopID)
+        val rs = preparedStatement.executeQuery()
+        if(rs.next()) {
+            return false
+        }
+        preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "INSERT INTO rating (boutiques_id, user_id, rating, commentary) VALUES (?,?,?,?)"
+        )
+        preparedStatement.setInt(1,shopID)
+        preparedStatement.setInt(2,userID)
+        preparedStatement.setDouble(3,rating)
+        preparedStatement.setString(4,commentary)
+        return preparedStatement.executeUpdate() == 1
+    }
+
+    fun getUserRating(shopID: Int, userID: Int): Rating {
+        val laConnexion = Connexion(url, username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT rating,commentary FROM rating WHERE user_id = ? AND boutiques_id = ?"
+        )
+        preparedStatement.setInt(1,userID)
+        preparedStatement.setInt(2,shopID)
+        val rs = preparedStatement.executeQuery()
+        val rating = if(rs.next()) {
+            Rating(
+                rs.getDouble("rating"),
+                rs.getString("commentary")
+            )
+        } else {
+            Rating(
+                0.0,
+                ""
+            )
+        }
+        laConnexion.fermerConnexion()
+        return rating
     }
 }

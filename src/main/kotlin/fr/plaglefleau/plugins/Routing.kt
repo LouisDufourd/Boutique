@@ -7,6 +7,7 @@ import fr.plaglefleau.models.api.boutique.response.BoutiquePayResponse
 import fr.plaglefleau.models.api.client.receive.*
 import fr.plaglefleau.models.api.client.response.*
 import fr.plaglefleau.models.database.Inventory
+import fr.plaglefleau.models.database.Rating
 import fr.plaglefleau.models.database.Utilisateur
 import fr.plaglefleau.models.freemarker.*
 import fr.plaglefleau.models.minecraft.Item
@@ -22,6 +23,7 @@ import io.ktor.server.freemarker.*
 import io.ktor.server.request.*
 import io.ktor.server.sessions.*
 import org.apache.commons.validator.routines.EmailValidator
+import java.text.DecimalFormat
 
 val gestion = Gestion()
 val invisibleCharRegex = Regex("[\\p{C}\\p{Z}]")
@@ -49,16 +51,20 @@ fun Application.configureRouting() {
         }
         staticResources("/assets", "assets")
         route("/") {
-            get("connect") {
+            get("connect/{username}/{password}") {
                 try {
-                    val username = call.parameters["username"]!!
-                    val password = call.parameters["password"]!!
+                    var url = call.parameters["url"].toString()
+                    val username = call.parameters["username"].toString()
+                    val password = call.parameters["password"].toString()
                     val userConnect = gestion.connexion(username, password)
+                    if(url == "null" || url == "") {
+                        url = "/"
+                    }
                     if (userConnect.isGoodLogin) {
                         call.sessions.set("connect", UserSession(userConnect.id))
-                        call.respondRedirect("/")
+                        call.respondRedirect(url)
                     } else {
-                        call.respondRedirect("/?connexionError=true")
+                        call.respondRedirect("${url}?connexionError=true")
                     }
                 } catch (e: Exception) {
                     giveErrorPage(call, e)
@@ -67,6 +73,21 @@ fun Application.configureRouting() {
             get("register") {
                 call.respond("this should be not reachable")
             }
+
+            route("shops") {
+                get("/") {
+                    shopList(call)
+                }
+                get("") {
+                    shopList(call)
+                }
+                route("/{id}") {
+                    get("") {
+
+                    }
+                }
+            }
+
             authenticate("user-session") {
                 get("profile") {
                     try {
@@ -79,11 +100,11 @@ fun Application.configureRouting() {
                             createShop = 0
                         }
                         val utilisateur = gestion.getUtilisateur(call.sessions.get<UserSession>()!!.userID)
-                        if(utilisateur == null) {
+                        if (utilisateur == null) {
                             call.respondRedirect("/disconnect")
                         } else {
                             val inventory = gestion.getInventory(utilisateur.username)
-                            if(inventory != null) {
+                            if (inventory != null) {
                                 for (i in 0 until inventory.items.size) {
                                     inventory.items[i].item.imageSrc = gestion.getItemImage(inventory.items[i].item)
                                 }
@@ -192,42 +213,6 @@ fun Application.configureRouting() {
                         } else {
                             gestion.deleteStand(id)
                             call.respondRedirect("/stores")
-                        }
-                    }
-                }
-
-                route("shops") {
-                    get("/") {
-                        var createShop = call.parameters["createShopError"].toString().toIntOrNull()
-                        if (createShop == null) {
-                            createShop = 0
-                        }
-                        val shops = ArrayList<Shops>()
-                        val boutiques = gestion.getAllStores()
-                        boutiques.forEach {
-                            shops.add(
-                                Shops(
-                                    it,
-                                    gestion.getNumberOfItem(it.id),
-                                    gestion.getNumberOfMember(it.id)
-                                )
-                            )
-                        }
-                        if (isFrench(call)) {
-                            call.respond(
-                                HttpStatusCode.OK,
-                                FreeMarkerContent(
-                                    "fr/shops.ftl",
-                                    mapOf(
-                                        "data" to ShopsPage(
-                                            shops,
-                                            ConnectedPage(
-                                                createShop!!
-                                            )
-                                        )
-                                    )
-                                )
-                            )
                         }
                     }
                 }
@@ -348,6 +333,22 @@ fun Application.configureRouting() {
                     }
                 }
 
+                route("shops") {
+                    route("/{id}") {
+                        get("/comment/{commentary}/{rating}") {
+                            val shopID = call.parameters["id"].toString().toIntOrNull()
+                            val commentary = call.parameters["commentary"].toString()
+                            val rating = call.parameters["rating"].toString().toDoubleOrNull()
+                            val userID = call.sessions.get<UserSession>()!!.userID
+                            if (gestion.addReview(shopID!!, commentary, rating!!, userID)) {
+                                call.respondRedirect("/shops")
+                            } else {
+                                call.respondRedirect("/shops?commentError=1")
+                            }
+                        }
+                    }
+                }
+
                 get("removeMember") {
                     val url = call.parameters["url"].toString()
                     val userID = call.parameters["userID"].toString().toIntOrNull()
@@ -366,8 +367,12 @@ fun Application.configureRouting() {
 
                 get("disconnect") {
                     try {
+                        var url = call.parameters["url"].toString()
+                        if(url == "null" || url == "") {
+                            url = "/"
+                        }
                         call.sessions.clear("connect")
-                        call.respondRedirect("/")
+                        call.respondRedirect(url)
                     } catch (e: Exception) {
                         giveErrorPage(call, e)
                     }
@@ -415,7 +420,7 @@ fun Application.configureRouting() {
                     get("inventory/{username}") {
                         val username = call.parameters["username"].toString()
                         val inventory: Inventory? = gestion.getInventory(username)
-                        if(inventory == null) {
+                        if (inventory == null) {
                             call.respond(HttpStatusCode.NotFound, "no inventory was found")
                         } else {
                             call.respond(HttpStatusCode.OK, inventory)
@@ -424,7 +429,7 @@ fun Application.configureRouting() {
                     get("balance/{username}") {
                         val username = call.parameters["username"].toString()
                         val solde = gestion.getSolde(username)
-                        if(solde < 0) {
+                        if (solde < 0) {
                             call.respond(HttpStatusCode.NotFound)
                         } else {
                             println(solde)
@@ -736,17 +741,28 @@ suspend fun handleStockRequest(call: ApplicationCall) {
                 gestion.editStock(articleID, boutiqueID, price)
             }
         }
+
         "/addStock" -> {
             val quantity = call.parameters["quantity"]?.toIntOrNull()
             val price = call.parameters["price"]?.toDoubleOrNull()
-            if (quantity != null && price != null && gestion.isTheUserHaveTheRights(userSession.userID, boutiqueID, 2)) {
+            if (quantity != null && price != null && gestion.isTheUserHaveTheRights(
+                    userSession.userID,
+                    boutiqueID,
+                    2
+                )
+            ) {
                 gestion.addStock(articleID, boutiqueID, quantity, price)
             }
         }
+
         "/bailoutStock" -> {
             val quantity = call.parameters["quantity"]?.toIntOrNull()
             if (quantity != null && itemName != "null" && quantity >= 0) {
-                if (gestion.removeItemFromInventory(userSession.userID, Item(Material(itemName!!),"",0,0,ArrayList(), null, null), quantity) &&
+                if (gestion.removeItemFromInventory(
+                        userSession.userID,
+                        Item(Material(itemName!!), "", 0, 0, ArrayList(), null, null),
+                        quantity
+                    ) &&
                     gestion.isTheUserHaveTheRights(userSession.userID, boutiqueID, 3)
                 ) {
                     gestion.bailoutStock(articleID, boutiqueID, quantity)
@@ -756,6 +772,52 @@ suspend fun handleStockRequest(call: ApplicationCall) {
     }
 
     call.respondRedirect(url)
+}
+
+suspend fun shopList(call: ApplicationCall) {
+    val df = DecimalFormat("0.00")
+    try {
+        var createShop = call.parameters["createShopError"].toString().toIntOrNull()
+        var commentError = call.parameters["commentError"].toString().toIntOrNull()
+        if (createShop == null) {
+            createShop = 0
+        }
+        if(commentError == null) {
+            commentError = 0
+        }
+        val shops = ArrayList<Shops>()
+        val boutiques = gestion.getAllStores()
+        boutiques.forEach {
+            val session = call.sessions.get<UserSession>()
+            val userRating = if(session != null) {
+                gestion.getUserRating(it.id, session.userID)
+            } else {
+                Rating(0.0, "")
+            }
+            val rating = if(gestion.getShopRating(it.id) == null) {
+                "-"
+            } else {
+                df.format(gestion.getShopRating(it.id))
+            }
+            shops.add(
+                Shops(
+                    it,
+                    rating,
+                    userRating,
+                    gestion.getShopOwner(it.id)!!.username,
+                    gestion.getNumberOfItem(it.id),
+                    gestion.getNumberOfMember(it.id)
+                )
+            )
+        }
+        if(isFrench(call)) {
+            giveShopPage(call, shops, createShop, "fr")
+        } else {
+            giveShopPage(call, shops, createShop, "en")
+        }
+    } catch (e: Exception) {
+        giveErrorPage(call, e)
+    }
 }
 
 suspend fun storesList(call: ApplicationCall) {
@@ -795,8 +857,44 @@ suspend fun storesList(call: ApplicationCall) {
 }
 
 suspend fun giveErrorPage(call: ApplicationCall, e: Exception) {
-    System.err.println(e.message)
     call.respond(HttpStatusCode.InternalServerError, e)
+    e.printStackTrace()
+}
+
+suspend fun giveShopPage(call: ApplicationCall, shops: ArrayList<Shops>, createShop: Int, lang: String) {
+    if(call.sessions.get<UserSession>() != null) {
+        call.respond(
+            HttpStatusCode.OK,
+            FreeMarkerContent(
+                "${lang}/shops.ftl",
+                mapOf(
+                    "data" to ShopsPage(
+                        shops,
+                        ConnectedPage(
+                            createShop
+                        ),
+                        true
+                    )
+                )
+            )
+        )
+    } else {
+        call.respond(
+            HttpStatusCode.OK,
+            FreeMarkerContent(
+                "${lang}/shops.ftl",
+                mapOf(
+                    "data" to ShopsPage(
+                        shops,
+                        ConnectedPage(
+                            createShop
+                        ),
+                        false
+                    )
+                )
+            )
+        )
+    }
 }
 
 fun getHomepageError(call: ApplicationCall): Homepage {

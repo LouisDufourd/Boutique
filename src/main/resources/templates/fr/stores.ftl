@@ -1,5 +1,5 @@
 <#import "header.ftl" as head>
-<#import "navbar.ftl" as nav>
+<#import "connectedNavbar.ftl" as nav>
 <#import "form.ftl" as form>
 <!DOCTYPE html>
 <html lang="fr">

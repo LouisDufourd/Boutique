@@ -20,6 +20,11 @@
                             Profile
                         </a>
                     </li>
+                    <li>
+                        <a class="nav-link link-secondary" href="/shops">
+                            Boutiques
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link link-secondary" href="#" data-bs-toggle="modal" data-bs-target="#createShopForm">
                             Créer une boutique
@@ -31,7 +36,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link link-danger" href="/disconnect">
+                        <a class="nav-link link-danger" id="disconnect" href="/disconnect">
                             <div class="text-danger">Déconnexion</div>
                         </a>
                     </li>
@@ -40,4 +45,7 @@
         </div>
     </nav>
     <br/>
+    <script>
+        document.getElementById("disconnect").href = "/disconnect?url="+document.location.pathname
+    </script>
 </#macro>
