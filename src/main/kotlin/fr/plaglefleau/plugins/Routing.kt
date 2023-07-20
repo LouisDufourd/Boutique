@@ -65,25 +65,7 @@ fun Application.configureRouting() {
                 }
             }
             get("register") {
-                try {
-                    val user = call.parameters["username"]!!
-                    val pass = call.parameters["password"]!!
-                    val email = call.parameters["email"]!!
-                    if (invisibleCharRegex.findAll(user).map { it.value }.toList()
-                            .isNotEmpty() || user == "null" || user == ""
-                    ) {
-                        call.respondRedirect("/?registerError=2")
-                    } else if (invisibleCharRegex.findAll(pass).map { it.value }.toList()
-                            .isNotEmpty() || pass == "null" || pass == ""
-                    ) {
-                        call.respondRedirect("/?registerError=3")
-                    } else {
-                        val result = gestion.inscription(user, pass, email)
-                        call.respondRedirect("/?registerError=${result}")
-                    }
-                } catch (e: Exception) {
-                    giveErrorPage(call, e)
-                }
+                call.respond("this should be not reachable")
             }
             authenticate("user-session") {
                 get("profile") {
@@ -210,6 +192,42 @@ fun Application.configureRouting() {
                         } else {
                             gestion.deleteStand(id)
                             call.respondRedirect("/stores")
+                        }
+                    }
+                }
+
+                route("shops") {
+                    get("/") {
+                        var createShop = call.parameters["createShopError"].toString().toIntOrNull()
+                        if (createShop == null) {
+                            createShop = 0
+                        }
+                        val shops = ArrayList<Shops>()
+                        val boutiques = gestion.getAllStores()
+                        boutiques.forEach {
+                            shops.add(
+                                Shops(
+                                    it,
+                                    gestion.getNumberOfItem(it.id),
+                                    gestion.getNumberOfMember(it.id)
+                                )
+                            )
+                        }
+                        if (isFrench(call)) {
+                            call.respond(
+                                HttpStatusCode.OK,
+                                FreeMarkerContent(
+                                    "fr/shops.ftl",
+                                    mapOf(
+                                        "data" to ShopsPage(
+                                            shops,
+                                            ConnectedPage(
+                                                createShop!!
+                                            )
+                                        )
+                                    )
+                                )
+                            )
                         }
                     }
                 }
@@ -359,10 +377,10 @@ fun Application.configureRouting() {
         authenticate("api-bearer") {
             route("/api/") {
                 route("client/") {
-                    get("connect/{username}/{password}") {
-                        val username = call.parameters["username"].toString()
+                    get("connect/{identifiant}/{password}") {
+                        val identifiant = call.parameters["identifiant"].toString()
                         val password = call.parameters["password"].toString()
-                        val userConnect = gestion.connexion(username, password)
+                        val userConnect = gestion.connexion(identifiant, password)
                         if (userConnect.isGoodLogin) {
                             val user = gestion.getUtilisateur(
                                 userConnect.id
@@ -446,6 +464,7 @@ fun Application.configureRouting() {
                                 } else {
                                     when (gestion.inscription(
                                         registerReceive.username,
+                                        registerReceive.UUID,
                                         registerReceive.password,
                                         registerReceive.email
                                     )) {

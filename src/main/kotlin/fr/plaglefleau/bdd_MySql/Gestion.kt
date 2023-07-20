@@ -1,7 +1,6 @@
 package fr.plaglefleau.bdd_MySql
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import fr.plaglefleau.models.database.*
 import fr.plaglefleau.models.minecraft.Item
 import fr.plaglefleau.models.minecraft.ItemSlotPair
@@ -16,13 +15,14 @@ class Gestion {
     val username = "Plag"
     val password = "PiWizupAl12u"
 
-    fun connexion(user: String, password: String): UserConnect {
+    fun connexion(identifiant: String, password: String): UserConnect {
         val laConnexion = Connexion(url, username, this.password)
         val preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT id FROM user WHERE username = ? AND password = MD5(?)"
+            "SELECT id FROM user WHERE (username = ? OR UUID = ?) AND password = MD5(?)"
         )
-        preparedStatement.setString(1, user)
-        preparedStatement.setString(2, password)
+        preparedStatement.setString(1, identifiant)
+        preparedStatement.setString(2, identifiant)
+        preparedStatement.setString(3, password)
         val rs = preparedStatement.executeQuery()
         val userConnect = if (rs.next()) {
             UserConnect(rs.getInt("id"), true)
@@ -83,24 +83,26 @@ class Gestion {
         return 0
     }
 
-    fun inscription(user: String, pass: String, email: String): Int {
+    fun inscription(user: String, UUID:String, pass: String, email: String): Int {
         val laConnexion = Connexion(url, username, password)
         var preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT NULL FROM user WHERE username = ?"
+            "SELECT NULL FROM user WHERE username = ? OR UUID = ?"
         )
         preparedStatement.setString(1, user)
+        preparedStatement.setString(2, UUID)
         var rs = preparedStatement.executeQuery()
         if (rs.next()) {
             laConnexion.fermerConnexion()
             return 1
         }
         preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "INSERT INTO user (id,username,password,email,create_time,nombre_slot) " +
-                    "VALUES (NULL,?,MD5(?),?,CURRENT_TIMESTAMP,27)"
+            "INSERT INTO user (id,username,UUID,password,email,create_time,nombre_slot) " +
+                    "VALUES (NULL,?,?,MD5(?),?,CURRENT_TIMESTAMP,41)"
         )
         preparedStatement.setString(1, user)
-        preparedStatement.setString(2, pass)
-        preparedStatement.setString(3, email)
+        preparedStatement.setString(2, UUID)
+        preparedStatement.setString(3, pass)
+        preparedStatement.setString(4, email)
         preparedStatement.executeUpdate()
         Thread.sleep(500)
         preparedStatement = laConnexion.getConnexion().prepareStatement(
@@ -120,7 +122,7 @@ class Gestion {
             "INSERT INTO inventaire (user_id,inventory) VALUES (?,?)"
         )
         preparedStatement.setInt(1,userID)
-        preparedStatement.setString(1,Gson().toJson(ArrayList<Any>()))
+        preparedStatement.setString(2,Gson().toJson(Inventory(ArrayList<ItemSlotPair>())))
         preparedStatement.executeUpdate()
         laConnexion.fermerConnexion()
         return 0
@@ -133,7 +135,7 @@ class Gestion {
             laConnexion.fermerConnexion()
             return 1
         }
-        var preparedStatement = laConnexion.getConnexion().prepareStatement("INSERT INTO boutiques VALUES (NULL,?,0.0,1200)")
+        var preparedStatement = laConnexion.getConnexion().prepareStatement("INSERT INTO boutiques VALUES (NULL,?,0.0,1200,0)")
         preparedStatement.setString(1, shopName)
         if (preparedStatement.executeUpdate() != 1) {
             laConnexion.fermerConnexion()
@@ -170,7 +172,7 @@ class Gestion {
         val laConnexion = Connexion(url, username, password)
         val storesList = ArrayList<Boutique>()
         var preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT boutiques.id,boutiques.nom,boutiques.solde,boutiques.default_salary FROM membre_boutique " +
+            "SELECT boutiques.id,boutiques.nom,boutiques.solde,boutiques.default_salary,boutiques.nombre_transaction FROM membre_boutique " +
                     "INNER JOIN user ON membre_boutique.user_id = user.id " +
                     "INNER JOIN boutiques ON membre_boutique.boutiques_id = boutiques.id " +
                     "WHERE user_id = ?"
@@ -183,7 +185,8 @@ class Gestion {
                     rs.getInt("boutiques.id"),
                     rs.getString("boutiques.nom"),
                     rs.getDouble("boutiques.solde"),
-                    rs.getDouble("boutiques.default_salary")
+                    rs.getDouble("boutiques.default_salary"),
+                    rs.getInt("boutiques.nombre_transaction")
                 )
             )
         }
@@ -207,7 +210,8 @@ class Gestion {
                             it.id,
                             it.nom,
                             it.solde,
-                            it.defaultSalary
+                            it.defaultSalary,
+                            it.nombreDeTransaction
                         ),
                         Utilisateur(
                             rs.getInt("user.id"),
@@ -239,7 +243,7 @@ class Gestion {
         val laConnexion = Connexion(url, username, password)
         val boutiques = ArrayList<Boutique>()
         val preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT id, nom, solde, default_salary FROM boutiques"
+            "SELECT id, nom, solde, default_salary, nombre_transaction FROM boutiques"
         )
         val rs = preparedStatement.executeQuery()
         while (rs.next()) {
@@ -248,7 +252,8 @@ class Gestion {
                     rs.getInt("id"),
                     rs.getString("nom"),
                     rs.getDouble("solde"),
-                    rs.getDouble("default_salary")
+                    rs.getDouble("default_salary"),
+                    rs.getInt("nombre_transaction")
                 )
             )
         }
@@ -311,7 +316,7 @@ class Gestion {
         val laConnexion = Connexion(url, username, password)
         val storesUserList = ArrayList<BoutiqueMembre>()
         val preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT boutiques.nom, boutiques.solde, boutiques.default_salary,user.id,user.username,user.email,user.password,user.create_time,user.nombre_slot,user.solde,role.id,role.nom_fr,role.nom_en,membre_boutique.salary,membre_boutique.last_salary " +
+            "SELECT boutiques.nom, boutiques.solde, boutiques.default_salary, boutiques.nombre_transaction, user.id,user.username,user.email,user.password,user.create_time,user.nombre_slot,user.solde,role.id,role.nom_fr,role.nom_en,membre_boutique.salary,membre_boutique.last_salary " +
                     "FROM membre_boutique " +
                     "INNER JOIN boutiques ON boutiques.id = membre_boutique.boutiques_id " +
                     "INNER JOIN user ON user.id = membre_boutique.user_id " +
@@ -327,7 +332,8 @@ class Gestion {
                         storeID,
                         rs.getString("boutiques.nom"),
                         rs.getDouble("boutiques.solde"),
-                        rs.getDouble("boutiques.default_salary")
+                        rs.getDouble("boutiques.default_salary"),
+                        rs.getInt("boutiques.nombre_transaction")
                     ),
                     Utilisateur(
                         rs.getInt("user.id"),
@@ -497,7 +503,7 @@ class Gestion {
         val laConnexion = Connexion(url, username, password)
         val stocks = ArrayList<Stock>()
         val preparedStatement = laConnexion.getConnexion().prepareStatement(
-            "SELECT boutiques_id,article_id,quantite,prix,article.nom,article.logo,boutiques.nom,boutiques.solde,boutiques.default_salary FROM stocks " +
+            "SELECT boutiques_id,article_id,quantite,prix,article.nom,article.logo,boutiques.nom,boutiques.solde,boutiques.default_salary, boutiques.nombre_transaction FROM stocks " +
                     "INNER JOIN article ON stocks.article_id = article.id " +
                     "INNER JOIN boutiques ON stocks.boutiques_id = boutiques.id " +
                     "WHERE boutiques_id = ?"
@@ -511,7 +517,8 @@ class Gestion {
                         rs.getInt("boutiques_id"),
                         rs.getString("boutiques.nom"),
                         rs.getDouble("boutiques.solde"),
-                        rs.getDouble("boutiques.default_salary")
+                        rs.getDouble("boutiques.default_salary"),
+                        rs.getInt("boutiques.nombre_transaction")
                     ),
                     Article(
                         rs.getInt("article_id"),
@@ -931,5 +938,59 @@ class Gestion {
             null
         }
         return imageSrc
+    }
+
+    fun getAllStores() : ArrayList<Boutique> {
+        val laConnexion = Connexion(url, username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT id, nom, solde, default_salary,nombre_transaction FROM boutiques"
+        )
+        val rs = preparedStatement.executeQuery()
+        val boutiques = ArrayList<Boutique>()
+        while (rs.next()) {
+            boutiques.add(
+                Boutique(
+                    rs.getInt("id"),
+                    rs.getString("nom"),
+                    rs.getDouble("solde"),
+                    rs.getDouble("default_salary"),
+                    rs.getInt("nombre_transaction")
+                )
+            )
+        }
+        laConnexion.fermerConnexion()
+        return boutiques
+    }
+
+    fun getNumberOfItem(storeID: Int): Int {
+        val laConnexion = Connexion(url, username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT COUNT(*) FROM stocks WHERE boutiques_id = ?"
+        )
+        preparedStatement.setInt(1,storeID)
+        val rs = preparedStatement.executeQuery()
+        val count = if(rs.next()) {
+            rs.getInt(1)
+        } else {
+            0
+        }
+        laConnexion.fermerConnexion()
+        return count
+    }
+
+    fun getNumberOfMember(storeID: Int): Int{
+        val laConnexion = Connexion(url, username, password)
+        val preparedStatement = laConnexion.getConnexion().prepareStatement(
+            "SELECT COUNT(*) FROM membre_boutique WHERE boutiques_id = ?"
+        )
+        preparedStatement.setInt(1,storeID)
+        val rs = preparedStatement.executeQuery()
+        val count = if(rs.next()) {
+            rs.getInt(1)
+        } else {
+            0
+        }
+        laConnexion.fermerConnexion()
+        return count
     }
 }
