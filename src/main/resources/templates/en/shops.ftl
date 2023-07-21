@@ -6,7 +6,7 @@
 </#if>
 <#import "form.ftl" as form>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <link rel="stylesheet" href="/assets/css/review.css">
     <@head.header>
@@ -50,7 +50,7 @@
                                     <p class="mb-0">${shop.numberOfItem}</p>
                                 </div>
                                 <div class="px-3">
-                                    <p class="small text-muted mb-1">Membre</p>
+                                    <p class="small text-muted mb-1">Member</p>
                                     <p class="mb-0">${shop.numberOfMember}</p>
                                 </div>
                                 <div>
@@ -61,30 +61,30 @@
                             <div class="d-flex pt-1">
                                 <button type="button" class="btn btn-outline-primary me-1 flex-grow-1"
                                         data-bs-toggle="modal" data-bs-target="#commentShop${shop.boutique.id}">
-                                    Commenter
+                                    Comment
                                 </button>
                                 <button type="button" onclick="acheter(${shop.boutique.id})"
-                                        class="btn btn-primary flex-grow-1">Acheter
+                                        class="btn btn-primary flex-grow-1">Buy
                                 </button>
                                 <div class="modal fade" id="commentShop${shop.boutique.id}" tabindex="-1"
                                      aria-labelledby="createShopLabel" aria-hidden="true">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title" id="commentShopLabel">Commentaire</h5>
+                                                <h5 class="modal-title" id="commentShopLabel">Comment</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                         aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
                                                 <div class="mb-3">
-                                                    <label for="commentary" class="form-label">Commentaire</label>
+                                                    <label for="commentary" class="form-label">Comment</label>
                                                     <textarea type="text" class="form-control" name="commentary"
                                                               id="commentary${shop.boutique.id}"
                                                               onload='this.value.replace("\"","")'>${shop.userRating.commentary}</textarea>
                                                 </div>
                                                 <div class="mb-3">
                                                     <label for="rating${shop.boutique.id}"
-                                                           class="form-label">Note</label>
+                                                           class="form-label">Rating</label>
                                                     <input
                                                             class="rating"
                                                             max="5"
@@ -132,24 +132,22 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="connexionLabel">Connexion</h5>
+                    <h5 class="modal-title" id="connexionLabel">Login</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
 
                     <div class="mb-3">
-                        <label for="username" class="form-label">Nom d'utilisateur</label>
-                        <input type="text" class="form-control" name="username" id="username" minlength="4"
-                               required>
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" id="username" minlength="4">
                     </div>
                     <div class="mb-3">
-                        <label for="password" class="form-label">Mots de passe</label>
-                        <input type="password" class="form-control" name="password" id="password" minlength="8"
-                               required>
+                        <label for="password" class="form-label">Passwords</label>
+                        <input type="password" class="form-control" name="password" id="password" minlength="8">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" onclick="connectSubmit()" class="btn btn-primary">Connexion</button>
+                    <button type="submit" onclick="connectSubmit()" class="btn btn-primary">Login</button>
                 </div>
             </div>
         </div>
